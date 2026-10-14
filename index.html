@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Подари сердце</title>
+<style>
+  html,body{margin:0;padding:0;height:100%;height:100dvh;background:#000;
+    overflow:hidden;position:fixed;inset:0;
+    font-family:'Courier New',ui-monospace,monospace;
+    -webkit-text-size-adjust:100%;touch-action:manipulation}
+  #matrix{position:fixed;inset:0;z-index:0;display:block;background:#000}
+  #ascii {position:fixed;inset:0;z-index:1;display:block;background:transparent;
+    touch-action:none}
+
+  #intro{
+    position:fixed;inset:0;z-index:10;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.82);
+    transition:opacity .9s ease;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right)
+            env(safe-area-inset-bottom) env(safe-area-inset-left);
+    box-sizing:border-box;
+  }
+  #intro.hide{opacity:0;pointer-events:none}
+  #introForm{
+    width:480px;max-width:94vw;box-sizing:border-box;
+    display:flex;flex-direction:column;
+    filter:drop-shadow(0 0 26px rgba(255,0,60,.55));
+    font-family:'Courier New',monospace;
+    transition:transform .3s ease;
+  }
+  #introForm.focused{transform:translateY(-14vh)}
+  .frame-top,.frame-bottom{
+    height:14px;line-height:14px;font-size:14px;
+    color:#ff2a4d;text-shadow:0 0 7px #ff0033,0 0 2px #ff0033;
+    white-space:nowrap;overflow:hidden;text-align:center;
+    user-select:none;
+  }
+  .frame-body{
+    padding:8px 40px 26px;background:rgba(6,0,0,.75);
+    display:flex;flex-direction:column;box-sizing:border-box;
+  }
+  .title{
+    text-align:center;font-size:16px;letter-spacing:6px;
+    color:#ff3050;margin:0 0 16px;font-weight:normal;
+    text-shadow:0 0 12px #ff0033,0 0 4px #ff0033;
+  }
+  #introForm label{
+    display:block;font-size:12px;letter-spacing:5px;
+    color:#ff6f8a;margin:10px 0 2px;
+    text-shadow:0 0 6px rgba(255,0,60,.8);
+  }
+  #introForm input,#introForm textarea{
+    background:transparent;border:0;
+    border-bottom:1px dashed rgba(255,42,77,.7);
+    color:#ffb3c2;font-family:inherit;font-size:16px;letter-spacing:2px;
+    padding:8px 4px 10px;outline:none;resize:none;
+    transition:.3s;width:100%;box-sizing:border-box;
+    text-shadow:0 0 6px rgba(255,0,60,.55);
+    -webkit-appearance:none;appearance:none;border-radius:0;
+  }
+  #introForm input::placeholder,
+  #introForm textarea::placeholder{color:rgba(255,120,150,.3);letter-spacing:2px}
+  #introForm input:focus,#introForm textarea:focus{
+    border-bottom-color:#ff2a4d;border-bottom-style:solid;color:#fff;
+    box-shadow:0 8px 22px -14px #ff0033;
+  }
+  #introForm textarea{min-height:60px;line-height:1.5}
+  #introForm button{
+    margin-top:22px;background:transparent;border:0;
+    color:#ff3050;font-family:inherit;font-size:15px;
+    letter-spacing:6px;padding:14px 0;cursor:pointer;
+    text-shadow:0 0 12px #ff0033,0 0 4px #ff0033;
+    transition:.25s;position:relative;user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #introForm button::before,
+  #introForm button::after{
+    content:'';display:block;height:1px;margin:6px 0;
+    background-image:linear-gradient(to right,
+      transparent 0, transparent 6%, #ff2a4d 6%, #ff2a4d 94%,
+      transparent 94%, transparent 100%);
+    box-shadow:0 0 6px #ff0033;opacity:.7;
+  }
+  #introForm button:hover,#introForm button:active{
+    color:#fff;letter-spacing:8px;
+    text-shadow:0 0 22px #ff0033,0 0 10px #ff0033,0 0 2px #fff;
+  }
+
+  @media (max-width: 520px){
+    #introForm{width:92vw}
+    .frame-body{padding:6px 20px 20px}
+    .title{font-size:13px;letter-spacing:3px;margin-bottom:12px}
+    #introForm label{font-size:10px;letter-spacing:3px;margin:8px 0 1px}
+    #introForm input,#introForm textarea{font-size:16px;padding:6px 3px 8px}
+    #introForm button{font-size:13px;letter-spacing:4px;padding:12px 0;margin-top:16px}
+    .frame-top,.frame-bottom{font-size:11px;height:12px;line-height:12px}
+  }
+  @media (max-height: 500px) and (orientation: landscape){
+    #introForm{width:70vw}
+    .frame-body{padding:4px 16px 12px}
+    .title{font-size:12px;margin-bottom:6px}
+    #introForm label{margin:4px 0 0}
+    #introForm textarea{min-height:36px}
+    #introForm button{padding:6px 0;margin-top:8px}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+<canvas id="ascii"></canvas>
+
+<div id="intro">
+  <div id="introForm">
+    <div class="frame-top"></div>
+    <div class="frame-body">
+      <div class="title">[ ПОДАРИ СЕРДЦЕ ]</div>
+
+      <label>&gt; ИМЯ</label>
+      <input id="inName" type="text" maxlength="24" placeholder="напр. Анна" autocomplete="off"
+             autocapitalize="words" enterkeyhint="next">
+
+      <label>&gt; ПОЖЕЛАНИЕ</label>
+      <textarea id="inWish" maxlength="240" placeholder="несколько тёплых слов…"
+                enterkeyhint="send"></textarea>
+
+      <button id="sendBtn" type="button">&gt;&gt; ОТПРАВИТЬ &lt;&lt;</button>
+    </div>
+    <div class="frame-bottom"></div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+
+THREE.ColorManagement.enabled = false;
+
+/* ══════════════════════════════════════════════
+   БИТМАП-ШРИФТ 5×7
+   ══════════════════════════════════════════════ */
+const FONT = {
+  'А':['.###.','#...#','#...#','#####','#...#','#...#','#...#'],
+  'Б':['#####','#....','#....','####.','#...#','#...#','####.'],
+  'В':['####.','#...#','#...#','####.','#...#','#...#','####.'],
+  'Г':['#####','#....','#....','#....','#....','#....','#....'],
+  'Д':['..#..','.#.#.','.#.#.','.#.#.','.#.#.','#####','#...#'],
+  'Е':['#####','#....','#....','####.','#....','#....','#####'],
+  'Ё':['.#.#.','.....','#####','#....','####.','#....','#####'],
+  'Ж':['#...#','#...#','#.#.#','#####','#.#.#','#...#','#...#'],
+  'З':['.###.','#...#','....#','..##.','....#','#...#','.###.'],
+  'И':['#...#','#...#','#..##','#.#.#','##..#','#...#','#...#'],
+  'Й':['..#..','.....','#...#','#..##','#.#.#','##..#','#...#'],
+  'К':['#...#','#..#.','#.#..','##...','#.#..','#..#.','#...#'],
+  'Л':['..###','.#..#','.#..#','.#..#','.#..#','.#..#','#...#'],
+  'М':['#...#','##.##','#.#.#','#...#','#...#','#...#','#...#'],
+  'Н':['#...#','#...#','#...#','#####','#...#','#...#','#...#'],
+  'О':['.###.','#...#','#...#','#...#','#...#','#...#','.###.'],
+  'П':['#####','#...#','#...#','#...#','#...#','#...#','#...#'],
+  'Р':['####.','#...#','#...#','####.','#....','#....','#....'],
+  'С':['.###.','#...#','#....','#....','#....','#...#','.###.'],
+  'Т':['#####','..#..','..#..','..#..','..#..','..#..','..#..'],
+  'У':['#...#','#...#','#...#','.####','....#','#...#','.###.'],
+  'Ф':['..#..','.###.','#.#.#','#.#.#','#.#.#','.###.','..#..'],
+  'Х':['#...#','#...#','.#.#.','..#..','.#.#.','#...#','#...#'],
+  'Ц':['#...#','#...#','#...#','#...#','#...#','#####','....#'],
+  'Ч':['#...#','#...#','#...#','.####','....#','....#','....#'],
+  'Ш':['#.#.#','#.#.#','#.#.#','#.#.#','#.#.#','#.#.#','#####'],
+  'Щ':['#.#.#','#.#.#','#.#.#','#.#.#','#.#.#','#####','....#'],
+  'Ъ':['##...','.#...','.#...','.###.','.#..#','.#..#','.###.'],
+  'Ы':['#...#','#...#','#...#','###.#','#..##','#..##','###.#'],
+  'Ь':['#....','#....','#....','####.','#...#','#...#','####.'],
+  'Э':['.###.','#...#','....#','..###','....#','#...#','.###.'],
+  'Ю':['#..#.','#.#.#','#.#.#','###.#','#.#.#','#.#.#','#..#.'],
+  'Я':['.####','#...#','#...#','.####','..#.#','.#..#','#...#'],
+  'A':['.###.','#...#','#...#','#####','#...#','#...#','#...#'],
+  'B':['####.','#...#','#...#','####.','#...#','#...#','####.'],
+  'C':['.###.','#...#','#....','#....','#....','#...#','.###.'],
+  'D':['###..','#..#.','#...#','#...#','#...#','#..#.','###..'],
+  'E':['#####','#....','#....','####.','#....','#....','#####'],
+  'F':['#####','#....','#....','####.','#....','#....','#....'],
+  'G':['.###.','#...#','#....','#.###','#...#','#...#','.###.'],
+  'H':['#...#','#...#','#...#','#####','#...#','#...#','#...#'],
+  'I':['#####','..#..','..#..','..#..','..#..','..#..','#####'],
+  'J':['..###','...#.','...#.','...#.','#..#.','#..#.','.##..'],
+  'K':['#...#','#..#.','#.#..','##...','#.#..','#..#.','#...#'],
+  'L':['#....','#....','#....','#....','#....','#....','#####'],
+  'M':['#...#','##.##','#.#.#','#...#','#...#','#...#','#...#'],
+  'N':['#...#','#...#','##..#','#.#.#','#..##','#...#','#...#'],
+  'O':['.###.','#...#','#...#','#...#','#...#','#...#','.###.'],
+  'P':['####.','#...#','#...#','####.','#....','#....','#....'],
+  'Q':['.###.','#...#','#...#','#...#','#.#.#','#..#.','.##.#'],
+  'R':['####.','#...#','#...#','####.','#.#..','#..#.','#...#'],
+  'S':['.####','#....','#....','.###.','....#','....#','####.'],
+  'T':['#####','..#..','..#..','..#..','..#..','..#..','..#..'],
+  'U':['#...#','#...#','#...#','#...#','#...#','#...#','.###.'],
+  'V':['#...#','#...#','#...#','#...#','#...#','.#.#.','..#..'],
+  'W':['#...#','#...#','#...#','#...#','#.#.#','##.##','#...#'],
+  'X':['#...#','#...#','.#.#.','..#..','.#.#.','#...#','#...#'],
+  'Y':['#...#','#...#','.#.#.','..#..','..#..','..#..','..#..'],
+  'Z':['#####','....#','...#.','..#..','.#...','#....','#####'],
+  '0':['.###.','#...#','#..##','#.#.#','##..#','#...#','.###.'],
+  '1':['..#..','.##..','..#..','..#..','..#..','..#..','.###.'],
+  '2':['.###.','#...#','....#','...#.','..#..','.#...','#####'],
+  '3':['#####','...#.','..#..','...#.','....#','#...#','.###.'],
+  '4':['...#.','..##.','.#.#.','#..#.','#####','...#.','...#.'],
+  '5':['#####','#....','####.','....#','....#','#...#','.###.'],
+  '6':['..##.','.#...','#....','####.','#...#','#...#','.###.'],
+  '7':['#####','....#','...#.','..#..','.#...','.#...','.#...'],
+  '8':['.###.','#...#','#...#','.###.','#...#','#...#','.###.'],
+  '9':['.###.','#...#','#...#','.####','....#','...#.','.##..'],
+  ' ':['.....','.....','.....','.....','.....','.....','.....']
+};
+const LETTER_W = 5, LETTER_H = 7, LETTER_GAP = 1;
+
+/* ══════════════════════════════════════════════
+   АДАПТИВНЫЕ КОНСТАНТЫ (пересчитываются в resize)
+   ══════════════════════════════════════════════ */
+let CELL_W = 7, CELL_H = 11;    // размер клетки ASCII, CSS px
+let MX_FONT = 14;               // размер шрифта матричного дождя, CSS px
+
+const FRAME_MS = 1000 / 30;
+const PAL = ' .:-=+*#%@';
+const LAST = PAL.length - 1;
+const HEART_CY   = -2.6;
+const MAIN_SCALE = 0.070;
+
+const T_HEART   = 2.0;
+const T_NAME    = 1.8;
+const T_PAUSE   = 0.5;
+const T_TIMER   = 10.0;
+const T_START_NAME   = T_HEART;
+const T_START_TIMER  = T_HEART + T_NAME + T_PAUSE;
+const T_START_WISHES = T_START_TIMER + T_TIMER;
+
+let currentName = '';
+let currentWish = '';
+let started     = false;
+let startT      = 0;
+
+let isMobile       = false;
+let camBaseR       = 4.9;
+let PANEL_COLS     = 54;
+let PANEL_CELL_W   = 10;
+let PANEL_CELL_H   = 16;
+let TIMER_CW       = 5;
+let TIMER_CH       = 7;
+let TIMER_OFFSET_Y = 90;
+let DPR            = 1;          // ← вычисляется в resize
+
+/* ══════════════════════════════════════════════
+   ВЫЧИСЛЕНИЕ АДАПТИВНЫХ ПАРАМЕТРОВ
+   ══════════════════════════════════════════════ */
+function computeResponsive(){
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const aspect = W / H;
+
+  isMobile = W < 700 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  // ── размер ASCII-клетки ──
+  // На телефоне — мельче, значит больше символов → чётче форма.
+  if (W < 420){
+    CELL_W = 4; CELL_H = 7;
+  } else if (W < 560){
+    CELL_W = 5; CELL_H = 8;
+  } else if (W < 820){
+    CELL_W = 6; CELL_H = 9;
+  } else {
+    CELL_W = 7; CELL_H = 11;
+  }
+
+  // ── матричный дождь ──
+  if (W < 420) MX_FONT = 10;
+  else if (W < 820) MX_FONT = 12;
+  else MX_FONT = 14;
+
+  // ── камера ──
+  if (aspect < 1) camBaseR = 4.9 * (1 + (1 - aspect) * 0.85);
+  else camBaseR = 4.9;
+
+  // ── панель пожеланий ──
+  if (W < 520){
+    PANEL_COLS   = 34;
+    PANEL_CELL_W = Math.max(6, Math.floor((W - 26) / PANEL_COLS));
+    PANEL_CELL_H = Math.round(PANEL_CELL_W * 1.55);
+  } else if (W < 800){
+    PANEL_COLS   = 44;
+    PANEL_CELL_W = Math.max(8, Math.floor((W - 40) / PANEL_COLS));
+    PANEL_CELL_H = Math.round(PANEL_CELL_W * 1.55);
+  } else {
+    PANEL_COLS   = 54;
+    PANEL_CELL_W = 10;
+    PANEL_CELL_H = 16;
+  }
+
+  // ── таймер ──
+  if (W < 420){
+    TIMER_CW = 3;   TIMER_CH = 4.5;
+    TIMER_OFFSET_Y = Math.round(H * 0.15);
+  } else if (W < 820){
+    TIMER_CW = 4;   TIMER_CH = 5.6;
+    TIMER_OFFSET_Y = 80;
+  } else {
+    TIMER_CW = 5;   TIMER_CH = 7;
+    TIMER_OFFSET_Y = 90;
+  }
+}
+computeResponsive();
+
+/* ══════════════════════════════════════════════ */
+function buildFrame(){
+  const form = document.getElementById('introForm');
+  const top    = form.querySelector('.frame-top');
+  const bottom = form.querySelector('.frame-bottom');
+  const w = form.offsetWidth || 480;
+  const charW = isMobile ? 6.6 : 8.4;
+  const n = Math.max(16, Math.floor(w / charW));
+  const mid = '═'.repeat(n - 2);
+  top.textContent    = '╔' + mid + '╗';
+  bottom.textContent = '╚' + mid + '╝';
+}
+window.addEventListener('resize', buildFrame);
+window.addEventListener('orientationchange', () => setTimeout(buildFrame, 200));
+window.addEventListener('load', buildFrame);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(buildFrame);
+setTimeout(buildFrame, 60); setTimeout(buildFrame, 400);
+
+/* ══════════════════════════════════════════════
+   МАТРИЧНЫЙ ДОЖДЬ — теперь в DPR (без блюра!)
+   ══════════════════════════════════════════════ */
+const matrixCv = document.getElementById('matrix');
+const mctx = matrixCv.getContext('2d');
+const GLYPHS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789ABCDEF';
+let mxCols = 0, mxDrops = null;
+const MX_COLORS = [
+  [220,50,120],[200,40,100],[160,60,220],[240,80,160],[180,30,90],[140,50,200]
+];
+
+function initMatrix(){
+  const dpr = DPR;
+  matrixCv.width  = Math.round(window.innerWidth  * dpr);
+  matrixCv.height = Math.round(window.innerHeight * dpr);
+  mctx.setTransform(dpr, 0, 0, dpr, 0, 0);      // ← ключевое: рисование в CSS-координатах, вывод в DPR
+  mxCols = Math.max(1, Math.floor(window.innerWidth / MX_FONT));
+  mxDrops = new Array(mxCols);
+  for (let i = 0; i < mxCols; i++) mxDrops[i] = Math.random() * -60;
+}
+
+function drawMatrix(){
+  // фон стираем через CSS-размеры (transform уже учитывает dpr)
+  mctx.fillStyle = 'rgba(0,0,0,0.18)';
+  mctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+  mctx.font = MX_FONT + 'px "Courier New", monospace';
+  mctx.textAlign = 'center';
+  mctx.textBaseline = 'middle';
+
+  for (let i = 0; i < mxCols; i++){
+    if (Math.random() < 0.65){
+      const x = i * MX_FONT + MX_FONT / 2;
+      const y = mxDrops[i] * MX_FONT;
+      const ch = GLYPHS[(Math.random() * GLYPHS.length) | 0];
+      const c = MX_COLORS[(Math.random() * MX_COLORS.length) | 0];
+      mctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},0.32)`;
+      mctx.fillText(ch, x, y);
+    }
+    mxDrops[i]++;
+    if (mxDrops[i] * MX_FONT > window.innerHeight && Math.random() > 0.97) mxDrops[i] = 0;
+  }
+}
+
+/* ══════════════════════════════════════════════ */
+const ascii = document.getElementById('ascii');
+const ctx = ascii.getContext('2d', { alpha: true });
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+scene.fog = new THREE.Fog(0x000000, 6, 20);
+const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 300);
+const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference:'high-performance' });
+renderer.setPixelRatio(1);
+renderer.setClearColor(0x000000, 1);
+
+function heartPoint(t){
+  const s = Math.sin(t);
+  return [16*s*s*s, 13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t)];
+}
+function buildHeart(scale, k, shadeLo, shadeHi, segments){
+  const vc = (segments + 1) * 2;
+  const pos = new Float32Array(vc * 3);
+  const col = new Float32Array(vc * 3);
+  const uA  = new Float32Array(vc);
+  const shA = new Float32Array(vc);
+  const idx = new Uint16Array(segments * 6);
+  for (let i = 0; i <= segments; i++){
+    const u = i / segments;
+    const a = u * Math.PI * 2;
+    const p = heartPoint(a);
+    const ox =  p[0] * scale;
+    const oy = (p[1] - HEART_CY) * scale;
+    const ix = ox * k, iy = oy * k;
+    const sh  = shadeLo + (shadeHi - shadeLo) * (0.5 + 0.5 * Math.sin(a*2 + 1.6));
+    const shI = sh * 0.55;
+    const ia = i * 2, ib = ia + 1;
+    pos[ia*3]=ox; pos[ia*3+1]=oy; pos[ia*3+2]=0;
+    pos[ib*3]=ix; pos[ib*3+1]=iy; pos[ib*3+2]=0;
+    uA[ia]=u; uA[ib]=u; shA[ia]=sh; shA[ib]=shI;
+    col[ia*3]=col[ia*3+1]=col[ia*3+2]=sh;
+    col[ib*3]=col[ib*3+1]=col[ib*3+2]=shI;
+    if (i < segments){
+      const o = i * 6;
+      idx[o]=ia; idx[o+1]=ib; idx[o+2]=ia+2;
+      idx[o+3]=ib; idx[o+4]=ib+2; idx[o+5]=ia+2;
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color',    new THREE.BufferAttribute(col, 3));
+  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  g.userData.u = uA; g.userData.shade = shA;
+  return g;
+}
+
+const heartGeo = buildHeart(MAIN_SCALE, 0.76, 0.85, 1.0, 240);
+const mainMat = new THREE.MeshBasicMaterial({
+  color: 0xff0000, vertexColors: true, side: THREE.DoubleSide, fog: true
+});
+const mainMesh  = new THREE.Mesh(heartGeo, mainMat);
+const mainGroup = new THREE.Group();
+mainGroup.add(mainMesh);
+scene.add(mainGroup);
+
+const BACK_COLORS = [0xff2f6d,0xff1a2e,0xff7a18,0xffffff,0xa855f7,0xff5fa2,0xff4400,0xd8b4fe];
+const backDefs = [
+  { x:-2.6,y: 1.5,z:-2.6,s:0.60,b:0.60,ph:0.0 },
+  { x: 3.0,y: 1.1,z:-3.8,s:0.46,b:0.55,ph:1.3 },
+  { x:-4.4,y:-1.3,z:-5.2,s:0.70,b:0.50,ph:2.6 },
+  { x: 4.2,y:-1.7,z:-3.2,s:0.52,b:0.58,ph:3.9 },
+  { x:-1.4,y: 2.5,z:-6.0,s:0.82,b:0.45,ph:5.1 },
+  { x: 1.8,y:-2.6,z:-4.6,s:0.40,b:0.62,ph:6.4 },
+  { x:-5.2,y: 0.3,z:-2.2,s:0.36,b:0.60,ph:7.7 },
+  { x: 5.4,y: 0.7,z:-6.4,s:0.75,b:0.42,ph:9.0 }
+];
+const backHearts = [];
+for (let i = 0; i < 8; i++){
+  const d = backDefs[i];
+  const base = new THREE.Color(BACK_COLORS[i]);
+  const mat = new THREE.MeshBasicMaterial({
+    color: base.clone(), vertexColors: true, side: THREE.DoubleSide, fog: true
+  });
+  const mesh = new THREE.Mesh(heartGeo, mat);
+  mesh.scale.setScalar(d.s);
+  const grp = new THREE.Group();
+  grp.add(mesh);
+  grp.position.set(d.x, d.y, d.z);
+  scene.add(grp);
+  backHearts.push({ grp, mat, base, def: d });
+}
+
+/* ══════════════════════════════════════════════
+   ИМЯ
+   ══════════════════════════════════════════════ */
+let nameGrid = null;
+let nameCellW = 6, nameCellH = 10;
+const projVec = new THREE.Vector3();
+const NAME_ANCHOR = new THREE.Vector3(0, 0.10, 0);
+
+function buildNameGrid(text){
+  const chars = text.toUpperCase().split('');
+  const totalCols = chars.length * (LETTER_W + LETTER_GAP) - LETTER_GAP;
+  const cells = [];
+  for (let ci = 0; ci < chars.length; ci++){
+    const pat = FONT[chars[ci]] || FONT[' '];
+    const offX = ci * (LETTER_W + LETTER_GAP);
+    for (let ry = 0; ry < LETTER_H; ry++){
+      const row = pat[ry];
+      for (let rx = 0; rx < LETTER_W; rx++){
+        if (row[rx] === '#') cells.push({ x: offX + rx, y: ry });
+      }
+    }
+  }
+
+  let cw = isMobile ? 4.5 : 6;
+  let ch = isMobile ? 7   : 10;
+
+  const maxFrac = isMobile ? 0.6 : 0.42;
+  const maxW = Math.min(window.innerWidth * maxFrac, 480);
+  const neededW = totalCols * cw;
+  if (neededW > maxW){
+    const k = maxW / neededW;
+    cw = Math.max(3, cw * k);
+    ch = Math.max(5, ch * k);
+  }
+
+  nameCellW = cw;
+  nameCellH = ch;
+  nameGrid = { cols: totalCols, rows: LETTER_H, cells };
+}
+
+function drawNameAscii(progress, tt){
+  if (!nameGrid || !started) return;
+
+  projVec.copy(NAME_ANCHOR).project(camera);
+  const cx = (projVec.x + 1) * 0.5 * window.innerWidth;
+  const cy = (-projVec.y + 1) * 0.5 * window.innerHeight;
+
+  const totalW = nameGrid.cols * nameCellW;
+  const totalH = nameGrid.rows * nameCellH;
+  const x0 = cx - totalW / 2;
+  const y0 = cy - totalH / 2;
+
+  ctx.font = `bold ${(nameCellH * 0.95).toFixed(1)}px "Courier New", monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const revealX = progress * (nameGrid.cols + 4);
+
+  for (const cell of nameGrid.cells){
+    const edge = cell.x - revealX;
+    if (edge > 1) continue;
+    let alpha = 1;
+    if (edge > -2.5) alpha = 1 - (edge + 2.5) / 3.5;
+
+    const px = x0 + (cell.x + 0.5) * nameCellW;
+    const py = y0 + (cell.y + 0.5) * nameCellH;
+
+    const fl = Math.sin(tt * 4.5 + cell.x * 0.9 + cell.y * 1.7);
+    let gi = 8 + Math.round(fl * 0.8);
+    if (gi < 7) gi = 7;
+    if (gi > 9) gi = 9;
+
+    const pulse = 0.88 + 0.12 * Math.sin(tt * 3.2 + cell.x * 0.35 + cell.y * 0.6);
+    const r = Math.floor(160 + 85 * pulse);
+    const g = Math.floor(228 + 27 * pulse);
+    const b = 255;
+
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.fillText(PAL[gi], px, py);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* ══════════════════════════════════════════════
+   ТАЙМЕР
+   ══════════════════════════════════════════════ */
+const TIMER_FONT = {
+  '0':['###','# #','# #','# #','###'], '1':[' # ','## ',' # ',' # ',' # '],
+  '2':['###','  #','###','#  ','###'], '3':['###','  #','###','  #','###'],
+  '4':['# #','# #','###','  #','  #'], '5':['###','#  ','###','  #','###'],
+  '6':['###','#  ','###','# #','###'], '7':['###','  #','  #','  #','  #'],
+  '8':['###','# #','###','# #','###'], '9':['###','# #','###','  #','###'],
+  '.':['   ','   ','   ',' # ','   '], '[':['## ','#  ','#  ','#  ','## '],
+  ']':[' ##','  #','  #','  #',' ##'], ' ':['   ','   ','   ','   ','   ']
+};
+let timerBoxX = 0, timerBoxY = 0, timerBoxW = 0, timerBoxH = 0;
+
+function drawTimerAscii(text, cx, cy, tt){
+  const lines = 5;
+  const cols = text.length * 4 - 1;
+  const totalW = cols * TIMER_CW;
+  const totalH = lines * TIMER_CH;
+  const x0 = cx - totalW / 2;
+  const y0 = cy - totalH / 2;
+  timerBoxX = x0; timerBoxY = y0; timerBoxW = totalW; timerBoxH = totalH;
+
+  ctx.font = `bold ${(TIMER_CH * 1.2).toFixed(1)}px "Courier New", monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  let col = 0;
+  for (let i = 0; i < text.length; i++){
+    const pat = TIMER_FONT[text[i]] || TIMER_FONT[' '];
+    for (let r = 0; r < lines; r++){
+      const row = pat[r];
+      for (let c = 0; c < 3; c++){
+        if (row[c] !== '#') continue;
+        const px = x0 + (col + c) * TIMER_CW + TIMER_CW / 2;
+        const py = y0 + r * TIMER_CH + TIMER_CH / 2;
+        const fl = (Math.sin(tt * 14 + col * 0.9 + r * 1.3) + 1) * 0.5;
+        let gIdx = LAST - 1 - Math.round((1 - fl) * 2);
+        if (gIdx < LAST - 3) gIdx = LAST - 3;
+        if (gIdx > LAST) gIdx = LAST;
+        const glow = 0.72 + 0.28 * fl;
+        ctx.fillStyle = `rgb(${Math.floor(255*glow)},${Math.floor(45*glow+8)},${Math.floor(70*glow+15)})`;
+        ctx.fillText(PAL[gIdx], px, py);
+      }
+    }
+    col += 4;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   ПАНЕЛЬ ПОЖЕЛАНИЙ
+   ══════════════════════════════════════════════ */
+const PANEL_ROWS = 12;
+let wishesState = 'idle';
+let panelGrid = null;
+let panelParticles = [];
+let panelX0 = 0, panelY0 = 0;
+let wishesT0 = 0;
+
+const FRAME_H  = ['═','─','━','~','-','⎯','⌒'];
+const FRAME_V  = ['║','│','┃','|','┆','⎪'];
+const FRAME_TL = ['╔','┌','⌜','╓','+','╭'];
+const FRAME_TR = ['╗','┐','⌝','╖','+','╮'];
+const FRAME_BL = ['╚','└','⌞','╙','+','╰'];
+const FRAME_BR = ['╝','┘','⌟','╜','+','╯'];
+const frameCellState = new Map();
+let frameEpoch = 0;
+
+function pickFrameChar(x, y, epoch){
+  const isCorner = (y === 0 || y === PANEL_ROWS - 1) && (x === 0 || x === PANEL_COLS - 1);
+  const seed = (x * 374761393 + y * 668265263 + epoch * 1442695040) | 0;
+  const r = Math.abs(Math.sin(seed) * 10000) % 1;
+  if (isCorner){
+    if (x === 0 && y === 0) return FRAME_TL[(r * FRAME_TL.length) | 0];
+    if (x === PANEL_COLS - 1 && y === 0) return FRAME_TR[(r * FRAME_TR.length) | 0];
+    if (x === 0 && y === PANEL_ROWS - 1) return FRAME_BL[(r * FRAME_BL.length) | 0];
+    return FRAME_BR[(r * FRAME_BR.length) | 0];
+  }
+  if (y === 0 || y === PANEL_ROWS - 1) return FRAME_H[(r * FRAME_H.length) | 0];
+  return FRAME_V[(r * FRAME_V.length) | 0];
+}
+
+function buildPanelGrid(text){
+  const g = [];
+  for (let y = 0; y < PANEL_ROWS; y++){
+    g[y] = [];
+    for (let x = 0; x < PANEL_COLS; x++) g[y][x] = null;
+  }
+  const BORDER = '#ff2a4d', TITLE = '#ff8fa8', TXT = '#ffc8d4';
+  for (let x = 0; x < PANEL_COLS; x++){
+    g[0][x] = { ch:'═', color:BORDER, border:true };
+    g[PANEL_ROWS-1][x] = { ch:'═', color:BORDER, border:true };
+  }
+  for (let y = 1; y < PANEL_ROWS - 1; y++){
+    g[y][0] = { ch:'║', color:BORDER, border:true };
+    g[y][PANEL_COLS-1] = { ch:'║', color:BORDER, border:true };
+  }
+  g[0][0] = {ch:'╔',color:BORDER,border:true,corner:true};
+  g[0][PANEL_COLS-1] = {ch:'╗',color:BORDER,border:true,corner:true};
+  g[PANEL_ROWS-1][0] = {ch:'╚',color:BORDER,border:true,corner:true};
+  g[PANEL_ROWS-1][PANEL_COLS-1] = {ch:'╝',color:BORDER,border:true,corner:true};
+
+  const title = '[ ПОЖЕЛАНИЕ ]';
+  const tX = Math.floor((PANEL_COLS - title.length) / 2);
+  for (let i = 0; i < title.length; i++) g[2][tX + i] = { ch:title[i], color:TITLE, title:true };
+
+  const innerW = PANEL_COLS - 6;
+  const words = (text || '').split(/\s+/).filter(Boolean);
+  const lines = [];
+  let cur = '';
+  for (const w of words){
+    const test = cur ? cur + ' ' + w : w;
+    if (test.length <= innerW) cur = test;
+    else {
+      if (cur) lines.push(cur);
+      cur = w.length > innerW ? w.slice(0, innerW) : w;
+    }
+  }
+  if (cur) lines.push(cur);
+
+  const startY = 4;
+  const maxLines = PANEL_ROWS - startY - 2;
+  for (let i = 0; i < Math.min(lines.length, maxLines); i++){
+    const line = lines[i];
+    const lx = Math.floor((PANEL_COLS - line.length) / 2);
+    for (let j = 0; j < line.length; j++){
+      g[startY + i][lx + j] = { ch:line[j], color:TXT };
+    }
+  }
+  return g;
+}
+
+function startWishesPanel(text){
+  panelGrid = buildPanelGrid(text);
+  frameCellState.clear();
+  frameEpoch = 0;
+
+  const W = window.innerWidth, H = window.innerHeight;
+  const panelW = PANEL_COLS * PANEL_CELL_W;
+  const panelH = PANEL_ROWS * PANEL_CELL_H;
+  panelX0 = (W - panelW) / 2;
+  panelY0 = (H - panelH) / 2;
+
+  const srcX = timerBoxW ? timerBoxX + timerBoxW / 2 : W / 2;
+  const srcY = timerBoxH ? timerBoxY + timerBoxH / 2 : H - TIMER_OFFSET_Y;
+  const srcW = timerBoxW || 160, srcH = timerBoxH || 40;
+
+  panelParticles = [];
+  for (let y = 0; y < PANEL_ROWS; y++){
+    for (let x = 0; x < PANEL_COLS; x++){
+      const c = panelGrid[y][x];
+      if (!c) continue;
+      const tx = panelX0 + (x + 0.5) * PANEL_CELL_W;
+      const ty = panelY0 + (y + 0.5) * PANEL_CELL_H;
+      const sx = srcX + (Math.random() - 0.5) * srcW;
+      const sy = srcY + (Math.random() - 0.5) * srcH;
+      const dist = Math.hypot(tx - srcX, ty - srcY);
+      const delay = Math.random() * 0.10 + dist * 0.0005;
+      panelParticles.push({
+        ch: c.ch, color: c.color, sx, sy, tx, ty, delay,
+        dur: 0.55 + Math.random() * 0.35
+      });
+    }
+  }
+  wishesState = 'particles';
+  wishesT0 = performance.now();
+}
+
+function drawWishesPanel(nowMs, tt){
+  if (wishesState === 'idle') return;
+  const elapsed = (nowMs - wishesT0) / 1000;
+
+  ctx.font = `bold ${(PANEL_CELL_H * 0.85).toFixed(1)}px "Courier New", monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  if (wishesState === 'particles'){
+    let allArrived = true;
+    for (const p of panelParticles){
+      const pe = elapsed - p.delay;
+      if (pe < 0){ allArrived = false; continue; }
+      const t01 = Math.min(pe / p.dur, 1);
+      if (t01 < 1) allArrived = false;
+      const e = 1 - Math.pow(1 - t01, 3);
+      const px = p.sx + (p.tx - p.sx) * e;
+      const py = p.sy + (p.ty - p.sy) * e;
+      const alpha = t01 < 0.25 ? (t01 / 0.25) : 1;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.fillText(p.ch, px, py);
+    }
+    ctx.globalAlpha = 1;
+    if (allArrived) wishesState = 'done';
+  }
+  else if (wishesState === 'done'){
+    const newEpoch = Math.floor(tt * 7);
+    if (newEpoch !== frameEpoch){ frameEpoch = newEpoch; frameCellState.clear(); }
+
+    for (let y = 0; y < PANEL_ROWS; y++){
+      for (let x = 0; x < PANEL_COLS; x++){
+        const c = panelGrid[y][x];
+        if (!c) continue;
+        let ch = c.ch, alpha = 1;
+        if (c.border){
+          const key = y * PANEL_COLS + x;
+          let st = frameCellState.get(key);
+          if (!st){ st = { ch: pickFrameChar(x, y, frameEpoch) }; frameCellState.set(key, st); }
+          ch = st.ch;
+          alpha = 0.68 + 0.32 * Math.abs(Math.sin(tt * 3.4 + x * 0.55 + y * 0.9));
+        } else if (c.title){
+          alpha = 0.8 + 0.2 * Math.sin(tt * 3.4 + x * 0.3);
+        }
+        const px = panelX0 + (x + 0.5) * PANEL_CELL_W;
+        const py = panelY0 + (y + 0.5) * PANEL_CELL_H;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = c.color;
+        ctx.fillText(ch, px, py);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   РЕСАЙЗ — DPR до 2, клетки пересчитаны
+   ══════════════════════════════════════════════ */
+let COLS = 0, ROWS = 0, rt = null, pixels = null, cellNoise = null;
+
+function resize(){
+  const W = window.innerWidth, H = window.innerHeight;
+
+  // DPR теперь до 2 (было 1.5) → вдвое чётче
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  computeResponsive();     // ← пересчёт CELL_W/CELL_H/MX_FONT/DPR-зависимостей
+
+  ascii.width  = Math.round(W * DPR);
+  ascii.height = Math.round(H * DPR);
+  ascii.style.width  = W + 'px';
+  ascii.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  COLS = Math.max(48, Math.floor(W / CELL_W));
+  ROWS = Math.max(36, Math.floor(H / CELL_H));
+
+  camera.aspect = W / H;
+  camera.updateProjectionMatrix();
+
+  if (rt) rt.dispose();
+  rt = new THREE.WebGLRenderTarget(COLS, ROWS, {
+    minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
+    format: THREE.RGBAFormat, type: THREE.UnsignedByteType,
+    depthBuffer: true, stencilBuffer: false
+  });
+  rt.texture.colorSpace = THREE.NoColorSpace;
+
+  pixels = new Uint8Array(COLS * ROWS * 4);
+  cellNoise = new Float32Array(COLS * ROWS);
+  for (let i = 0; i < cellNoise.length; i++) cellNoise[i] = Math.random();
+
+  initMatrix();            // ← пересоздать матрицу уже с новым DPR
+  if (currentName) buildNameGrid(currentName);
+
+  buildFrame();
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+resize();
+
+const colorCache = new Array(32768);
+function colStr(r, g, b){
+  const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+  let s = colorCache[key];
+  if (s === undefined){
+    s = 'rgb(' + ((key>>10)<<3) + ',' + (((key>>5)&31)<<3) + ',' + ((key&31)<<3) + ')';
+    colorCache[key] = s;
+  }
+  return s;
+}
+
+let pw = 0, glow = 0;
+function updateMainColors(){
+  const col = heartGeo.attributes.color.array;
+  const uA  = heartGeo.userData.u;
+  const shA = heartGeo.userData.shade;
+  const n   = uA.length;
+  for (let i = 0; i < n; i++){
+    const u = uA[i];
+    let d = (pw - u) / 0.10;
+    let rev = d <= 0 ? 0 : (d >= 1 ? 1 : d*d*(3 - 2*d));
+    let v = rev * shA[i];
+    if (glow > 0.001){
+      const gd = (pw - u) / 0.06;
+      v += Math.exp(-gd * gd) * 1.8 * glow;
+    }
+    if (v > 1) v = 1;
+    col[i*3] = col[i*3+1] = col[i*3+2] = v;
+  }
+  heartGeo.attributes.color.needsUpdate = true;
+}
+
+function beatWave(t){
+  const P = 1.15;
+  const x = (t % P) / P;
+  const a = Math.exp(-Math.pow((x - 0.10) / 0.055, 2));
+  const b = Math.exp(-Math.pow((x - 0.28) / 0.075, 2));
+  return a + 0.55 * b;
+}
+
+/* ══════════════════════════════════════════════ */
+const introEl  = document.getElementById('intro');
+const introFrm = document.getElementById('introForm');
+
+function startPlay(name, wish){
+  currentName = name;
+  currentWish = wish || 'С любовью…';
+  started = true;
+  startT  = t;
+  wishesState = 'idle';
+  panelParticles = [];
+  frameCellState.clear();
+  buildNameGrid(currentName);
+  introEl.classList.add('hide');
+  setTimeout(() => { introEl.style.display = 'none'; }, 1000);
+}
+
+function handleSubmit(e){
+  if (e){ e.preventDefault(); e.stopPropagation(); }
+  try {
+    const n = (document.getElementById('inName').value || '').trim() || 'Любимая';
+    const w = (document.getElementById('inWish').value || '').trim();
+    startPlay(n, w);
+  } catch (err){ console.error(err); introEl.style.display = 'none'; }
+}
+
+function bindUI(){
+  const btn = document.getElementById('sendBtn');
+  const inp = document.getElementById('inName');
+  const wsh = document.getElementById('inWish');
+  const frm = introFrm;
+
+  if (btn) btn.addEventListener('click', handleSubmit, false);
+  if (inp){
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter'){ e.preventDefault(); handleSubmit(e); }
+    }, false);
+    inp.addEventListener('focus', () => frm.classList.add('focused'));
+    inp.addEventListener('blur',  () => frm.classList.remove('focused'));
+  }
+  if (wsh){
+    wsh.addEventListener('focus', () => frm.classList.add('focused'));
+    wsh.addEventListener('blur',  () => frm.classList.remove('focused'));
+  }
+  if (frm) frm.addEventListener('submit', handleSubmit, false);
+}
+if (document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', bindUI);
+} else bindUI();
+setTimeout(bindUI, 50);
+
+(function (){
+  try {
+    const p = new URLSearchParams(location.search);
+    const n = p.get('name');
+    const w = p.get('wish');
+    if (n || w){
+      const kick = () => startPlay(n || 'Любимая', w || '');
+      if (document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', () => setTimeout(kick, 200));
+      } else setTimeout(kick, 200);
+    }
+  } catch (e){}
+})();
+
+/* ══════════════════════════════════════════════ */
+let t = 0, last = 0;
+
+function tick(now){
+  requestAnimationFrame(tick);
+  if (last === 0) last = now;
+  if (now - last < FRAME_MS) return;
+
+  const dt = Math.min((now - last) / 1000, 0.12);
+  last = now;
+  t += dt;
+
+  const W = window.innerWidth, H = window.innerHeight;
+  drawMatrix();
+
+  if (!started){
+    ctx.clearRect(0, 0, W, H);
+    return;
+  }
+
+  const el = t - startT;
+
+  pw   = Math.min(el / T_HEART, 1.0);
+  glow = 1 - Math.min(1, Math.max(0, (el - T_HEART + 0.6) / 0.6));
+  updateMainColors();
+
+  const bw = beatWave(t);
+  mainGroup.scale.set(1 + 0.090 * bw, 1 + 0.075 * bw, 1);
+
+  let hue = 0.985 + 0.055 * Math.sin(t * 0.23) + 0.025 * Math.sin(t * 0.11 + 2.1);
+  hue = ((hue % 1) + 1) % 1;
+  mainMat.color.setHSL(hue, 1.0, 0.56 + 0.07 * bw);
+
+  const fadeIn = Math.min(1, Math.max(0, (el - 0.25) / 1.6));
+  for (let i = 0; i < backHearts.length; i++){
+    const h = backHearts[i], d = h.def, ph = d.ph;
+    h.grp.position.set(
+      d.x + 0.55 * Math.sin(t * 0.13 + ph),
+      d.y + 0.40 * Math.sin(t * 0.17 + ph * 1.7),
+      d.z + 0.50 * Math.sin(t * 0.09 + ph * 2.1)
+    );
+    h.grp.rotation.z = t * 0.07 + ph;
+    h.grp.rotation.y = Math.sin(t * 0.11 + ph) * 0.55;
+    h.grp.rotation.x = Math.sin(t * 0.08 + ph * 1.3) * 0.28;
+    h.mat.color.copy(h.base).multiplyScalar(d.b * fadeIn * 0.75);
+  }
+
+  const camR = camBaseR + 0.55 * Math.sin(t * 0.041);
+  const camA = Math.sin(t * 0.052) * 1.15;
+  camera.position.set(
+    Math.sin(camA) * camR + 0.28 * Math.sin(t * 0.063),
+    0.45 * Math.sin(t * 0.047) + 0.22 * Math.sin(t * 0.071),
+    Math.cos(camA) * camR + 0.30 * Math.sin(t * 0.037)
+  );
+  camera.lookAt(
+    0.30 * Math.sin(t * 0.056),
+    0.22 * Math.sin(t * 0.043 + 1.3),
+    0.20 * Math.sin(t * 0.031)
+  );
+
+  renderer.setRenderTarget(rt);
+  renderer.render(scene, camera);
+  renderer.readRenderTargetPixels(rt, 0, 0, COLS, ROWS, pixels);
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'source-over';
+
+  // ── ASCII сердца (размер шрифта = CELL_H, плотно в клетке) ──
+  ctx.font = `bold ${(CELL_H * 0.95).toFixed(1)}px "Courier New", monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  for (let r = 0; r < ROWS; r++){
+    const srcRow = (ROWS - 1 - r) * COLS;
+    const py = r * CELL_H + CELL_H * 0.5;
+    for (let c = 0; c < COLS; c++){
+      const i = (srcRow + c) * 4;
+      const rr = pixels[i], gg = pixels[i+1], bb = pixels[i+2];
+      const lum = Math.max(rr, gg, bb) / 255;
+      if (lum < 0.07) continue;
+      const cn = cellNoise[r * COLS + c];
+      const flicker = Math.sin(t * 4.2 + cn * 37) * 1.05
+                    + Math.cos(t * 7.1 + cn * 91) * 0.65;
+      let gi = Math.round(lum * LAST + flicker * Math.min(1, lum * 1.4));
+      if (gi < 1) gi = 1; else if (gi > LAST) gi = LAST;
+      ctx.fillStyle = colStr(rr, gg, bb);
+      ctx.fillText(PAL[gi], c * CELL_W + CELL_W * 0.5, py);
+    }
+  }
+
+  const nameP = Math.max(0, Math.min((el - T_START_NAME) / T_NAME, 1));
+  if (nameP > 0) drawNameAscii(nameP, t);
+
+  if (el >= T_START_TIMER && el < T_START_WISHES){
+    const remain = T_START_WISHES - el;
+    const txt = '[' + remain.toFixed(2).padStart(5, '0') + ']';
+    drawTimerAscii(txt, W / 2, H - TIMER_OFFSET_Y, t);
+  }
+
+  if (el >= T_START_WISHES && wishesState === 'idle'){
+    startWishesPanel(currentWish);
+  }
+
+  let dimAmt = 0;
+  if (wishesState === 'particles') dimAmt = Math.min(0.72, (now - wishesT0) / 1000 * 1.2);
+  else if (wishesState === 'done') dimAmt = 0.72;
+  if (dimAmt > 0){
+    ctx.fillStyle = `rgba(0,0,0,${dimAmt})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  drawWishesPanel(now, t);
+}
+
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
